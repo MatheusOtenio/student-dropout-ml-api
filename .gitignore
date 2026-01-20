@@ -1,0 +1,38 @@
+# Ambiente e dependências
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# Arquivos e diretórios gerados pelo Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Arquivos de log e temporários
+*.log
+*.tmp
+*.temp
+*.cache
+
+# Arquivos de IDE / editor
+.vscode/
+.idea/
+*.code-workspace
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Artefatos de testes
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Artefatos de build / distribuição
+build/
+dist/
+*.egg-info/
+
