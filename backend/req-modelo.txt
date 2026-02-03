@@ -1,0 +1,27 @@
+
+Entrada exemplo de csv (1 linha é o nome das colunas e segunda linha é um exemplo de linha):
+"
+Campus,Sede,Nível de ensino,Grau,Periodicidade,Funcionamento,Turno,Curso,Sexo,Ano,Semestre,Nome,Código,Situação,Ano de ingresso,Calouro,Categoria stricto sensu,Coeficiente de rendimento,Cor ou raça,Código do curso,Código INEP do curso,Data de colação de grau,Data de ingresso,Data de nascimento,Disciplinas aprovadas,Disciplinas consignadas,Disciplinas matriculadas,Disciplinas reprovadas por frequência,Disciplinas reprovadas por nota,E-mail,Forma de ingresso,Idade,Matriz curricular,Mudou de curso - mesmo campus,Mudou de curso - outro campus,Município,Município SiSU,Nota ENEM Humanas,Nota ENEM Liguagem,Nota ENEM Matemática,Nota ENEM Natureza,Nota ENEM Redação,Nota final (SiSU/Vestibular),Nota Vestibular Biologia,Nota Vestibular Filosofia e Sociologia,Nota Vestibular Física,Nota Vestibular Geografia,Nota Vestibular História,Nota Vestibular Literatura Brasileira,Nota Vestibular Língua Estrangeira Moderna (Espanhol ou Inglês),Nota Vestibular Língua Portuguesa,Nota Vestibular Matemática,Nota Vestibular Química,Número de entradas em outros cursos,Número de entradas no curso,Ordem de ingresso no curso,País de nascimento,Período,Provável jubilamento,Regime de ensino,Retenção parcial,Retenção total,Sede,Semestre de ingresso no curso,Tipo de cota,Total de períodos do curso,Total de semestres cursados,UF,UF SISU
+Apucarana,Apucarana,Graduação,Bacharelado (engenharia),Semestral,Em Atividade,Diurno (M/T),Engenharia Têxtil,Feminino,2010,2,DANIELY BENTO DOS SANTOS,1213725,Desistente,2010,Não,,,Branca,7,1114930,,11/08/2010,18/09/1992,0,0,0,0,0,dany-bento@hotmail.com,Aproveitamento de Curso,18,7,Não,Não,Guaraci,,,,,,,,,,,,,,,,,,0,1,1,Brasil,1,Não,Semestral,Nao,Nao,Apucarana,2,Sem cotas,10,1,PR,
+"
+ou
+"
+Campus,Sede,Nível de ensino,Grau,Periodicidade,Funcionamento,Curso,Turno,Gênero,Nome,Código,Ano de ingresso,Ano/semestre da situação,Calouro,Categoria Stricto,Coeficiente de rendimento absoluto,Coeficiente de rendimento normalizado,Código do curso,Código INEP do curso,Data de colação de grau,Data de Conclusão,Data de ingresso,Data de nascimento,Forma de ingresso,Idade,Matriz curricular,Mudou curso (mesmo campus),Mudou curso (outro campus),Município,Município (SISU),Nota ENEM Humanas,Nota ENEM Liguagem,Nota ENEM Matemática,Nota ENEM Natureza,Nota ENEM Redação,Nota Final SISU,Nr de entradas em outros cursos de graduação,Nr de entradas no mesmo curso,Nr disciplinas aprovadas,Nr disciplinas reprovadas por frequência,Nr disciplinas reprovadas por nota,Ordem ingresso no curso,País de nascimento,Período,Provável jubilamento,Regime de ensino,Retenção parcial,Retenção total,Semestre de ingresso,Situação atual,Tipo de cota,Total de semestres cursados,Total de semestres do curso,UF,UF (SISU)
+Dois Vizinhos,Dois Vizinhos,Graduação,Bacharelado (engenharia),Semestral,Em Atividade,Engenharia Florestal,Diurno (M/T),Masculino,PAULO HENRIQUE MOREIRA BARROS,2372029,2021,2022/1,Não,,"0,7178","0,5853",6,112566,,,15/06/2021,11/11/2002,SISU - Sistema de Seleção Unificada,19,6,Não,Não,Sete Lagoas,Sete Lagoas,"665,9","589,8","569,7","568,6",380,"554,8",0,1,6,0,2,1,Brasil,2,Não,Semestral,Sim,Nao,1,Desistente,Não cotista,3,10,MG,MG
+"
+
+
+
+fastapi==0.128.0
+uvicorn[standard]==0.40.0
+pydantic>=2.0.0,<3.0.0
+numpy==2.4.1
+pandas==2.3.3
+scikit-learn==1.8.0
+lightgbm==4.6.0
+category_encoders==2.9.0
+joblib==1.5.3
+optuna==4.7.0
+requests==2.32.5
+streamlit==1.53.0
+termcolor==3.3.0

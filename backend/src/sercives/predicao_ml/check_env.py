@@ -4,13 +4,13 @@ import glob
 
 def main() -> None:
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    artifacts_dir = os.path.normpath(
-        os.path.join(base_dir, "..", "modelo_pkl", "artifacts")
+    models_dir = os.path.normpath(
+        os.path.join(base_dir, "..", "..", "models")
     )
-    relative_path = "../modelo_pkl/artifacts/"
+    relative_path = "../models/"
 
     try:
-        os.listdir(artifacts_dir)
+        os.listdir(models_dir)
     except FileNotFoundError:
         print(
             "MISSING_DATA: Diretório "
@@ -19,7 +19,7 @@ def main() -> None:
         )
         return
 
-    pattern = os.path.join(artifacts_dir, "*.pkl")
+    pattern = os.path.join(models_dir, "*.pkl")
     pkl_files = glob.glob(pattern)
 
     if not pkl_files:

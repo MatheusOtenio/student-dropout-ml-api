@@ -1,0 +1,297 @@
+Você já tem tudo o que precisa, só falta “encaixar as peças” de forma organizada. A ideia é:
+
+- Transformar `backend/src` em **um único pacote Python**.
+- Manter a lógica de `processador_csv` e `predicao_ml` quase intacta, só organizando pontos de entrada.
+- Criar uma **camada de orquestração** que:
+  - Recebe o CSV do front.
+  - Chama o processador.
+  - Chama a predição com o `.pkl` em `src/models`.
+  - Devolve o resultado ao front.
+
+Vou descrever o caminho completo, em camadas, evitando os problemas mais comuns.
+
+---
+
+**1. Estrutura de projeto e pacotes**
+
+Objetivo: tudo em `backend/src` deve se comportar como um único “módulo” do Python.
+
+Hoje você tem:
+
+- `backend/`
+  - `src/`
+    - `__init__.py`
+    - `models/`
+      - `model_20260120T164252.pkl`
+    - `preprocessing/preprocessing.py`
+    - `sercives/`
+      - `processador_csv/`
+        - `main.py`, `etl_service.py`, `mapping_service.py`, `schemas.py`, `frontend.py`
+      - `predicao_ml/`
+        - `backend_logic.py`, `check_env.py`
+
+Passos:
+
+- Coloque `__init__.py` em:
+  - `src/models/`
+  - `src/preprocessing/`
+  - `src/sercives/`
+  - `src/sercives/processador_csv/`
+  - `src/sercives/predicao_ml/`
+- Convenção de import dentro de `src`:
+  - `from sercives.processador_csv.etl_service import ...`
+  - `from sercives.predicao_ml.backend_logic import ...`
+  - `from preprocessing.preprocessing import ...`
+
+Regra de ouro: nada de `sys.path.append` e nada de import relativo confuso. Tudo via imports absolutos baseados no pacote `src`.
+
+---
+
+**2. Separar “lógica de domínio” dos “endpoints”**
+
+Hoje, como eram projetos separados, provavelmente:
+
+- `main.py` e/ou `frontend.py` do `processador_csv` misturam:
+  - Lógica de leitura de arquivo HTTP/Streamlit/CLI.
+  - Lógica de transformação de dados.
+- `backend_logic.py` do `predicao_ml` faz algo parecido:
+  - Lê entrada.
+  - Carrega o modelo.
+  - Prediz.
+
+Você quer **reaproveitar a lógica** sem mexer no algoritmo. Então:
+
+- No `processador_csv`:
+  - Identifique as funções que fazem o trabalho *real* de:
+    - Validar o CSV.
+    - Mapear colunas (provavelmente `mapping_service.py`).
+    - Aplicar ETL (provavelmente `etl_service.py`).
+  - Garanta que exista uma função “limpa”, algo conceitualmente assim:
+
+    ```python
+    def process_csv(file_like_obj) -> dict | DataFrame:
+        ...
+        return dados_transformados
+    ```
+
+    Onde:
+    - `file_like_obj` pode ser um `io.BytesIO`, `io.StringIO` ou caminho de arquivo.
+    - A função não sabe nada de HTTP, só recebe o arquivo.
+
+- No `predicao_ml`:
+  - Em `backend_logic.py`, extraia uma função de alto nível:
+
+    ```python
+    def predict(model_id: str, features) -> dict | list:
+        ...
+        return predictions
+    ```
+
+    Onde:
+    - `features` é o resultado do `process_csv`.
+    - A função cuida apenas de:
+      - Carregar o modelo `.pkl` correto.
+      - Rodar `model.predict` (ou equivalente).
+      - Organizar a saída.
+
+O que você muda aqui é **forma de entrada/saída**, não o algoritmo interno: você só empacota a lógica existente em funções bem definidas.
+
+---
+
+**3. Camada de orquestração (um backend único)**
+
+Agora você cria um **entrypoint único** para o backend, que:
+
+- Recebe o CSV do front.
+- Chama `process_csv`.
+- Chama `predict`.
+- Devolve o JSON com as predições.
+
+Imagine um arquivo orquestrador, por exemplo `front_test.py` (ou crie `src/api.py`, tanto faz, desde que seja o entrypoint do Docker):
+
+Passos conceituais:
+
+1. Framework HTTP (exemplos: FastAPI, Flask, etc.). Como você não mencionou, aqui é mais o *conceito*:
+   - Endpoint tipo `POST /predict`.
+2. Esse endpoint faz:
+   - Lê o arquivo CSV do request.
+   - Lê um `model_id` (ou usa um padrão, se tiver só 1 modelo).
+   - Transforma o arquivo em um objeto file-like para `process_csv`.
+   - Chama `process_csv`.
+   - Chama `predict(model_id, dados_transformados)`.
+   - Retorna o resultado em JSON.
+
+O importante é: o endpoint **não** deve conter lógica de ETL ou de predição. Ele só orquestra chamadas às funções que você extraiu.
+
+---
+
+**4. Caminhos e carregamento do modelo `.pkl`**
+
+Vários problemas aparecem nessa parte se não fizer com cuidado:
+
+- Erros de caminho quando roda local vs dentro do Docker.
+- Usar `open("model.pkl")` sem path absoluto e falhar.
+
+Boas práticas:
+
+- Dentro de `backend_logic.py`, defina a base do projeto usando `Path`:
+
+  ```python
+  from pathlib import Path
+
+  BASE_DIR = Path(__file__).resolve().parents[2]
+  MODELS_DIR = BASE_DIR / "src" / "models"
+  ```
+
+  Explicação:
+  - `__file__` → `.../src/sercives/predicao_ml/backend_logic.py`
+  - `parents[2]` → sobe dois níveis, deve cair em `backend/`
+  - a partir daí você constrói caminhos estáveis.
+
+- Carregar o modelo por `model_id`:
+
+  ```python
+  import joblib  # ou pickle, conforme você já usa
+
+  def load_model(model_id: str):
+      model_path = MODELS_DIR / f"{model_id}.pkl"
+      model = joblib.load(model_path)
+      return model
+  ```
+
+- Para evitar recarregar o modelo a cada requisição (bom para performance):
+
+  ```python
+  _model_cache = {}
+
+  def get_model(model_id: str):
+      if model_id not in _model_cache:
+          _model_cache[model_id] = load_model(model_id)
+      return _model_cache[model_id]
+  ```
+
+Assim você evita problemas de caminho e garante que funciona igual localmente e no Docker.
+
+---
+
+**5. Contrato com o front (payloads e fluxo)**
+
+Defina um contrato claro:
+
+- Endpoint principal: `POST /predict`
+- Request:
+  - `multipart/form-data` com:
+    - `file`: o CSV.
+    - `model_id`: string opcional (se tiver só 1 modelo, pode defaultar).
+- Fluxo interno:
+  - Backend lê `file` e cria um `io.BytesIO` ou `io.StringIO`.
+  - Chama `process_csv(file_obj)` que devolve um DataFrame ou lista de registros.
+  - Chama `predict(model_id, features)`.
+- Response:
+  - `application/json`:
+    - `predictions`: lista de resultados por linha.
+    - Opcional: `metadata` (model_id usado, timestamp, etc.).
+    - Opcional: `errors` (linhas descartadas, problemas de schema, etc.).
+
+Ter esse contrato fixo evita “gambiarras” depois e facilita testar.
+
+---
+
+**6. Validação, erros e “boas práticas”**
+
+Para não deixar nada de lado:
+
+- **Validação do CSV**:
+  - Em `process_csv`, valide:
+    - Presença de colunas obrigatórias.
+    - Tipos básicos (por exemplo, colunas numéricas).
+  - Se o CSV estiver errado, lance exceções específicas (por exemplo, `ValueError`), que o endpoint captura e converte em resposta HTTP 400.
+
+- **Validação do modelo**:
+  - Se `model_id` não existir (não houver `.pkl` correspondente), retorne erro 404 ou 400 com mensagem clara.
+
+- **Tratamento de exceções no endpoint**:
+  - Use `try/except` no nível do endpoint para:
+    - Converter exceções de domínio em respostas HTTP.
+    - Logar erros inesperados (para debug).
+
+- **Treino vs inferência alinhados**:
+  - Garanta que o mesmo pré-processamento que você usou no treino (no projeto `modelo_pkl`) está implementado em `preprocessing/preprocessing.py` e sendo reaproveitado no `process_csv`.
+  - Isso evita “train/serve skew” (modelo recebendo features diferentes da época do treino).
+
+- **Segurança básica**:
+  - Limite o tamanho do arquivo CSV aceito.
+  - Não faça `eval` em nada vindo do usuário.
+  - Nunca carregue código executável de dentro do `.pkl` que você não controla.
+
+---
+
+**7. Ambiente, Docker e execução**
+
+Para tudo funcionar igual em local, Docker e Render:
+
+- No `Dockerfile`, defina:
+
+  - `WORKDIR /app` (por exemplo).
+  - Copie `src/`, `requirements.txt`, etc.
+  - Instale as dependências.
+  - Rode o app apontando para o entrypoint único, por exemplo:
+
+    ```bash
+    python -m src.api
+    ```
+
+    ou:
+
+    ```bash
+    uvicorn src.api:app --host 0.0.0.0 --port 10000
+    ```
+
+  Importante: usar `python -m` garante que `src` é tratado como pacote, então os imports absolutos vão funcionar.
+
+- Não dependa de variáveis como `PYTHONPATH` ajustadas manualmente; deixe a estrutura de pacotes fazer o trabalho.
+
+---
+
+**8. Roteiro de implementação (passo a passo)**
+
+Se você seguir esta ordem, minimiza erros:
+
+1. **Preparar pacotes**:
+   - Criar `__init__.py` faltantes.
+   - Ajustar imports dentro de `src` para sempre usar `from sercives...` / `from preprocessing...`.
+
+2. **Extrair funções de serviço**:
+   - Em `processador_csv`, isolar uma função `process_csv(...)` que use sua lógica existente.
+   - Em `predicao_ml`, isolar `predict(model_id, features)` e funções de acesso ao modelo (`get_model`).
+
+3. **Testar os serviços em modo script**:
+   - Criar um script simples de teste (pode ser temporário) que:
+     - Lê um CSV do disco.
+     - Chama `process_csv`.
+     - Chama `predict`.
+     - Imprime o resultado.
+   - Garantir que isso rode com `python -m ...` a partir de `backend`.
+
+4. **Criar o entrypoint web único**:
+   - Em `front_test.py` ou outro arquivo:
+     - Importar `process_csv` e `predict`.
+     - Criar o endpoint `POST /predict`.
+     - Testar com `curl` ou Postman enviando um CSV.
+
+5. **Ajustar caminhos do modelo**:
+   - Implementar a lógica de `BASE_DIR`, `MODELS_DIR` e `get_model`.
+   - Testar rodando local e em container.
+
+6. **Colocar no Docker**:
+   - Ajustar Docker para usar o novo entrypoint.
+   - Buildar e subir o container localmente.
+   - Testar a requisição `POST /predict`.
+
+7. **Só então ir para o Render**:
+   - Configurar o serviço no Render apontando para a porta correta.
+   - Testar com o mesmo payload.
+
+---
+
+Seguindo essa linha, você transforma `backend` em um backend único, reaproveitando a lógica de `processador_csv` e `predicao_ml` sem reescrever algoritmos, só organizando melhor camadas, imports e paths. Se quiser, no próximo passo posso te ajudar a definir a assinatura concreta de `process_csv` e `predict` com base no que há em `etl_service.py` e `backend_logic.py` (sem alterar a lógica, só encaixando no formato certo).

@@ -151,5 +151,3 @@ try:
     COLUNAS_WHITELIST: List[str] = list(AlunoTarget.model_fields.keys())
 except AttributeError:
     COLUNAS_WHITELIST = list(AlunoTarget.__fields__.keys())
-
-

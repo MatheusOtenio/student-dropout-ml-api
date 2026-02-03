@@ -1,41 +1,67 @@
 # Sistema de Predição de Evasão Universitária
 
-Este repositório reúne três componentes principais que trabalham em conjunto:
+Este repositório reúne dois componentes principais que trabalham em conjunto:
 
-- **processador_csv/**: preparação e padronização dos dados de entrada.
-- **modelo_pkl/**: treinamento e validação do modelo de predição.
-- **predicao_ml/**: interface de inferência (Streamlit) usando o modelo treinado.
+- **backend/**: backend unificado que faz o papel do antigo `processador_csv` (ETL/mapeamento de colunas) e do `predicao_ml` (predição com modelo `.pkl`), pronto para rodar localmente ou em Docker.
+- **predicao_ml/**: interface Streamlit independente/legado para inferência direta a partir de um artefato `.pkl` (útil para experimentos e validação rápida).
 
-O objetivo é permitir que dados brutos de alunos sejam processados, utilizados para treinar um modelo robusto de predição de evasão e, por fim, consumidos em uma interface simples para uso por docentes e gestores.
-
----
-
-## processador_csv/
-
-Responsável por:
-
-- Ler arquivos CSV brutos fornecidos pela instituição.
-- Fazer limpeza básica e ajustes de formato (tipos, datas, normalização mínima).
-- Fazer *drop* de colunas irrelevantes para o problema de evasão, reduzindo ruído.
-- Gerar um CSV estruturado com as colunas esperadas pelo pipeline de modelagem em `modelo_pkl/`.
-
-Aqui a preocupação é mais de engenharia de dados do que de modelagem. A ideia é deixar o dataset:
-
-- **Consistente**: tipos de dados previsíveis e valores padronizados.
-- **Enxuto**: remoção de campos que não ajudam ou atrapalham na modelagem.
-
-Na prática, este estágio facilita reproduzir o fluxo de treinamento e inferência em ambientes diferentes, garantindo que o modelo receba sempre o mesmo formato de entrada.
+O objetivo é permitir que dados brutos de alunos sejam processados, utilizados em um modelo robusto de predição de evasão e, por fim, consumidos em uma interface simples para uso por docentes e gestores.
 
 ---
 
-## modelo_pkl/
+## backend/
 
-Aqui está a lógica de **treinamento**, avaliação e empacotamento do modelo em um artefato `.pkl`.
+O diretório `backend/` concentra hoje o fluxo completo que o usuário final precisa:
 
-Principais responsabilidades:
+1. **Receber um CSV bruto** enviado pelo usuário.
+2. **Sugerir um mapeamento de colunas** do CSV para o esquema interno.
+3. **Aplicar o ETL** (limpeza, padronização, engenharia de atributos) para produzir as features esperadas pelo modelo.
+4. **Carregar um modelo pré-treinado `.pkl`** a partir de `src/models/`.
+5. **Executar a predição de evasão** e retornar as probabilidades/indicadores ao cliente (ex.: Streamlit ou outra UI).
+
+A organização interna segue a mesma separação de responsabilidades dos projetos antigos, mas agora dentro de um único backend:
+
+- `src/preprocessing/`
+  - Contém as funções de pré-processamento compartilhadas, alinhadas ao pipeline usado no treinamento.
+
+- `src/sercives/processador_csv/`
+  - Lida com leitura de CSV, sugestão de mapeamento de colunas, validação de schema e ETL.
+  - Implementa o comportamento do antigo projeto `processador_csv`, agora exposto via API.
+
+- `src/sercives/predicao_ml/`
+  - Contém a lógica de carregamento do modelo `.pkl` (via `joblib`) e execução de `predict_proba`.
+  - Garante que o pipeline de pré-processamento (definido em `src.preprocessing`) é importável para desserializar corretamente o artefato.
+
+- `src/models/`
+  - Armazena os artefatos `.pkl` gerados pelo pipeline de treinamento (antes no projeto `modelo_pkl`).
+  - Cada arquivo representa um bundle de modelo pronto para produção.
+
+### Fluxo de ponta a ponta
+
+De forma simplificada, o backend executa o seguinte fluxo lógico:
+
+1. O usuário anexa um CSV com informações de alunos.
+2. O backend sugere um mapeamento entre colunas do CSV e campos internos (schemas) e permite pré-visualizar o resultado do ETL.
+3. Após confirmar o mapeamento, o backend aplica o ETL completo, reproduzindo o mesmo pré-processamento usado no treino.
+4. O backend carrega o modelo `.pkl` selecionado (por `model_id`) a partir de `src/models/`.
+5. O pipeline completo (pré-processamento + modelo) calcula:
+   - `prob_evasao`: probabilidade estimada de evasão.
+   - `class_pred`: rótulo binário (0/1) com threshold típico 0.5.
+   - `risk_level`: faixas de risco (Baixo, Médio, Alto) definidas por cortes em 0.33 e 0.66.
+6. O resultado é devolvido ao cliente (por exemplo, o cliente Streamlit em `backend/front_test.py`) em formato tabular ou JSON.
+
+O treinamento em si não acontece mais dentro de `backend/`: os modelos são treinados em um pipeline separado (equivalente ao antigo `modelo_pkl`), e apenas os artefatos `.pkl` finais são copiados para `backend/src/models/` para uso em produção.
+
+---
+
+## Pipeline de treinamento (conceito)
+
+Embora o treinamento não esteja mais exposto como um serviço separado neste repositório, o **design do pipeline de modelagem** permanece o mesmo do antigo `modelo_pkl` e é importante para entender o que está por trás dos artefatos `.pkl` usados pelo backend.
+
+Principais responsabilidades do pipeline de treino:
 
 - Mapear a coluna `situacao` (ex.: regular, desistente, trancado, afastado, etc.) para um alvo binário (evasão = 1, não evasão = 0).
-- Construir o pipeline de pré-processamento (`src/preprocessing.py`), incluindo:
+- Construir o pipeline de pré-processamento (`preprocessing.py`), incluindo:
   - Imputação de valores faltantes para variáveis numéricas e categóricas.
   - Engenharia de atributos como:
     - `nota_enem_total`
@@ -43,27 +69,31 @@ Principais responsabilidades:
     - `aprovacao_ratio`
   - Codificação categórica adaptativa com `category_encoders`:
     - One-Hot Encoding para baixa cardinalidade.
-    - Target Encoding para alta cardinalidade (usando a teoria de que esse tipo de codificação captura melhor relações entre categoria e alvo quando há muitas categorias raras).
+    - Target Encoding para alta cardinalidade (capturando melhor relações entre categoria e alvo quando há muitas categorias raras).
 - Treinar o modelo principal (ex.: LightGBM ou Regressão Logística calibrada) usando:
   - `class_weight="balanced"` para lidar com desbalanceamento de classes.
   - Validação cruzada estratificada (`StratifiedKFold`) para avaliar ROC AUC e Brier Score.
 - Opcionalmente, otimizar hiperparâmetros com **Optuna**:
-  - Escolhemos Optuna porque oferece uma busca eficiente em espaços de hiperparâmetros contínuos e categóricos, com boa experiência em problemas supervisionados tabulares.
+  - Optuna oferece uma busca eficiente em espaços de hiperparâmetros contínuos e categóricos, com boa experiência em problemas supervisionados tabulares.
 
-O resultado é um **bundle** `.pkl` salvo em `modelo_pkl/artifacts/`, com estrutura semelhante a:
+O resultado desse pipeline é um **bundle** `.pkl` que contém, tipicamente:
 
 - `preprocessor`: pipeline de pré-processamento.
 - `model`: pipeline completo (preprocessamento + modelo).
 - `metadata`: métricas, hiperparâmetros, mapeamento de classes, número de amostras, etc.
 - `version`: versão do modelo.
 
-Esse artefato é justamente o que será carregado pelo módulo de predição em `predicao_ml/`.
+São esses bundles que, uma vez gerados, são copiados para `backend/src/models/` e servidos pela API unificada.
 
 ---
 
 ## predicao_ml/
 
-Esta pasta contém a lógica de **inferência** e a **interface Streamlit** que o usuário final acessa.
+A pasta `predicao_ml/` mantém uma **interface Streamlit independente** para inferência direta a partir de um artefato `.pkl`. Ela é útil para:
+
+- Experimentar rapidamente com novos modelos.
+- Validar artefatos `.pkl` fora do backend unificado.
+- Demonstrar o modelo em um contexto puramente interativo.
 
 Componentes principais:
 
@@ -72,26 +102,21 @@ Componentes principais:
   - Garante que o pipeline de pré-processamento (definido em `src.preprocessing`) seja importável, para que o bundle seja desserializado corretamente.
   - Lê o CSV enviado pelo usuário (caminho ou *file-like*, como o `UploadedFile` do Streamlit).
   - Remove a coluna `situacao` do `DataFrame` de entrada antes da predição para evitar vazamento de dados.
-  - Executa `predict_proba` no pipeline completo e calcula:
-    - `prob_evasao` (probabilidade estimada de evasão).
-    - `class_pred` (0/1 com *threshold* 0.5).
-    - `risk_level` (Baixo, Médio, Alto) com cortes em 0.33 e 0.66.
-  - Retorna o `DataFrame` original com essas colunas adicionadas.
+  - Executa `predict_proba` no pipeline completo e calcula `prob_evasao`, `class_pred` e `risk_level`.
 
 - `frontendend.py`:
-  - Interface Streamlit para que o professor/usuário:
-    - Selecione o modelo `.pkl` disponível em `../modelo_pkl/artifacts/`.
+  - Interface Streamlit para que o usuário:
+    - Selecione um modelo `.pkl` disponível (por exemplo, em `../modelo_pkl/artifacts/` ou outro diretório de artefatos).
     - Faça *upload* de um CSV de alunos.
     - Visualize as predições com destaque visual para alunos em risco Médio/Alto.
     - Baixe o CSV enriquecido com as colunas de probabilidade e risco.
-  - Optamos por Streamlit por ser uma solução leve para criar protótipos de interfaces de dados em Python, permitindo validar o modelo com usuários finais sem esforço de front-end tradicional.
 
 - `check_env.py`:
-  - Verifica se o diretório de artefatos (`../modelo_pkl/artifacts/`) existe.
+  - Verifica a existência do diretório de artefatos.
   - Lista os arquivos `.pkl` disponíveis.
   - Emite avisos claros se não houver modelos encontrados.
 
-Em conjunto, `predicao_ml/` é o “ponto de contato” entre o modelo treinado e o usuário final, mantendo a lógica de ML no backend e expondo apenas os controles necessários para uso em sala ou gestão acadêmica.
+Na prática, `predicao_ml/` é uma ferramenta de apoio; o caminho principal para uso em produção passa pelo `backend/` unificado.
 
 ---
 
@@ -108,6 +133,8 @@ Algumas decisões adotadas neste repositório:
 - **Optuna para otimização de hiperparâmetros**  
   Optuna foi escolhido por ser flexível e eficiente, suportando busca bayesiana e integração limpa com scikit-learn. Na prática, isso permitiu explorar combinações de hiperparâmetros do LightGBM sem escrever lógica de busca manual.
 
-- **Streamlit para interface de predição**  
-  A interface foi pensada para ser usada por professores e analistas sem conhecimento técnico profundo em Python. Streamlit reduz a barreira de entrada, permitindo carregar modelos, anexar CSVs e visualizar resultados com poucas linhas de código e uma curva de aprendizado acessível.
+- **FastAPI + Uvicorn no backend**  
+  O backend unificado expõe uma API HTTP moderna, com validação de dados automática e documentação interativa.
 
+- **Streamlit para interfaces de predição e cliente de teste**  
+  A interface foi pensada para ser usada por professores e analistas sem conhecimento técnico profundo em Python. Streamlit reduz a barreira de entrada, permitindo carregar modelos, anexar CSVs e visualizar resultados com poucas linhas de código e uma curva de aprendizado acessível, tanto em `predicao_ml/` quanto no cliente de teste em `backend/front_test.py`.
