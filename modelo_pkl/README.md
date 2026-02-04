@@ -350,13 +350,7 @@ Colunas de features recomendadas (todas opcionais, o pipeline é robusto a ausê
 - Rodar API FastAPI:
 
   ```bash
-  uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
-  ```
-
-- Rodar Frontend Streamlit:
-
-  ```bash
-  streamlit run frontend.py
+  docker-compose up --build
   ```
 
 - Rodar testes de integração:
@@ -370,8 +364,12 @@ Colunas de features recomendadas (todas opcionais, o pipeline é robusto a ausê
   python tests/validate_model.py artifacts/model_nome.pkl
   ```
 
-- Para subir tudo:
+- Para rodar localmente:
 
   ```bash
-  docker-compose up --build
+  uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+  ```
+
+  ```bash
+  streamlit run frontend.py
   ```
