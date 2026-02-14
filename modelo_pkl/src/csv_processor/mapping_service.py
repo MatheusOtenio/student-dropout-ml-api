@@ -4,7 +4,10 @@ import logging
 from unidecode import unidecode
 from rapidfuzz import fuzz, process
 
-from src.sercives.processador_csv.schemas import COLUNAS_WHITELIST  # TODO: Fix typo.
+try:
+    from .schemas import COLUNAS_WHITELIST
+except ImportError:
+    from schemas import COLUNAS_WHITELIST
 
 
 logger = logging.getLogger(__name__)
@@ -29,7 +32,6 @@ ALIASES_CONHECIDOS: Dict[str, Optional[str]] = {
     "nome do curso": "curso",
     "curso graduacao": "curso",
     "campus": "campus",
-    # NB: "sede" foi deliberadamente removido — "Sede" é coluna própria nos CSVs.
     "turno": "turno",
 
     # --- Ingresso ---
@@ -73,15 +75,11 @@ ALIASES_CONHECIDOS: Dict[str, Optional[str]] = {
     # --- Ignorar Explicitamente ---
     "disciplinas reprovadas por frequencia": None,
     "nr disciplinas reprovadas por frequencia": None,
-    "cor ou raca": None,
-    "raca": None,
-    "uf": None,
-    "estado": None,
 
     # --- ENEM (inclui typo "Liguagem" que vem do sistema de origem) ---
     "nota enem humanas": "nota_enem_humanas",
     "nota enem linguagem": "nota_enem_linguagem",
-    "nota enem liguagem": "nota_enem_linguagem",       # typo conhecida no CSV fonte
+    "nota enem liguagem": "nota_enem_linguagem",      
     "nota enem matematica": "nota_enem_matematica",
     "nota enem natureza": "nota_enem_natureza",
     "nota enem redacao": "nota_enem_redacao",
@@ -97,16 +95,6 @@ ALIASES_CONHECIDOS: Dict[str, Optional[str]] = {
     "nota vestibular lingua portuguesa": "nota_vestibular_lingua_portuguesa",
     "nota vestibular matematica": "nota_vestibular_matematica",
     "nota vestibular quimica": "nota_vestibular_quimica",
-    
-    # --- Identificação ---
-    "nome": "nome_aluno",
-    "nome do aluno": "nome_aluno",
-    "aluno": "nome_aluno",
-    "codigo": "codigo_aluno",
-    "código": "codigo_aluno",
-    "matricula": "codigo_aluno",
-    "matrícula": "codigo_aluno",
-    "ra": "codigo_aluno",
 }
 
 
@@ -126,9 +114,6 @@ def gerar_sugestao_mapeamento(
             mapeamento[coluna_schema] = None
             continue
 
-        # ------------------------------------------------------------------
-        # 1) Tentativa por alias exato (após normalização)
-        # ------------------------------------------------------------------
         indice_alias: Optional[int] = None
         for i, nome_normalizado in enumerate(colunas_normalizadas):
             alvo_alias = ALIASES_CONHECIDOS.get(nome_normalizado)
@@ -140,9 +125,6 @@ def gerar_sugestao_mapeamento(
             mapeamento[coluna_schema] = colunas_csv_bruto[indice_alias]
             continue
 
-        # ------------------------------------------------------------------
-        # 2) Filtro de índices permitidos (evita cruzamentos ENEM ↔ Vestibular)
-        # ------------------------------------------------------------------
         query = unidecode(coluna_schema).strip().lower()
 
         allowed_indices: List[int] = []
@@ -157,11 +139,6 @@ def gerar_sugestao_mapeamento(
             mapeamento[coluna_schema] = None
             continue
 
-        # ------------------------------------------------------------------
-        # 3) Caso especial: municipio_residencia
-        #    Busca explícita por "municipio" e prefere a versão sem "sisu".
-        #    Suporta tanto "Município SiSU" quanto "Município (SISU)".
-        # ------------------------------------------------------------------
         if coluna_schema == "municipio_residencia":
             indices_municipio = [
                 i for i in allowed_indices if "municipio" in colunas_normalizadas[i]
@@ -177,9 +154,6 @@ def gerar_sugestao_mapeamento(
                 mapeamento[coluna_schema] = colunas_csv_bruto[indice_escolhido]
                 continue
 
-        # ------------------------------------------------------------------
-        # 4) Manual hints (substring scoring)
-        # ------------------------------------------------------------------
         indice_manual: Optional[int] = None
         padroes = MANUAL_HINTS.get(coluna_schema)
         if padroes:
@@ -194,9 +168,6 @@ def gerar_sugestao_mapeamento(
                 mapeamento[coluna_schema] = colunas_csv_bruto[indice_manual]
                 continue
 
-        # ------------------------------------------------------------------
-        # 5) Fuzzy match (fallback final)
-        # ------------------------------------------------------------------
         candidatos = [colunas_normalizadas[i] for i in allowed_indices]
 
         melhor_correspondencia = process.extractOne(
@@ -221,7 +192,6 @@ def gerar_sugestao_mapeamento(
 
 
 if __name__ == "__main__":
-    # --- CSV 1 (formato com Sexo, Cor ou raça, UF …) ---
     colunas_csv1 = [
         "Campus", "Sede", "Turno", "Curso", "Sexo", "Situação",
         "Ano de ingresso", "Coeficiente de rendimento", "Cor ou raça",
@@ -235,7 +205,6 @@ if __name__ == "__main__":
         "Total de semestres cursados", "UF",
     ]
 
-    # --- CSV 2 (formato com Gênero, Nr disciplinas …) ---
     colunas_csv2 = [
         "Campus", "Sede", "Curso", "Turno", "Gênero",
         "Ano de ingresso", "Coeficiente de rendimento absoluto",

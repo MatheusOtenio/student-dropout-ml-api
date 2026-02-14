@@ -9,12 +9,10 @@ class AlunoTarget(BaseModel):
         ...,
         description="Sexo declarado pelo aluno",
     )
-    # cor_raca REMOVED
     municipio_residencia: str = Field(
         ...,
         description="Município de residência do aluno",
     )
-    # uf_residencia REMOVED
     data_nascimento: Optional[date] = Field(
         None,
         description="Data de nascimento do aluno, quando disponível",
@@ -59,7 +57,6 @@ class AlunoTarget(BaseModel):
         ...,
         description="Número total de disciplinas reprovadas por nota",
     )
-    # disciplinas_reprovadas_frequencia REMOVED
     total_semestres_cursados: int = Field(
         ...,
         description="Total de semestres efetivamente cursados pelo aluno no curso atual",
@@ -138,12 +135,9 @@ class AlunoTarget(BaseModel):
     )
     # New fields
     calouro: int = Field(..., description="Indicador se é calouro (0/1)")
-    nome_aluno: Optional[str] = Field(
-        None, description="Nome do aluno (para identificação nos resultados)"
-    )
-    codigo_aluno: Optional[str] = Field(
-        None, description="Código/Matrícula do aluno (para identificação nos resultados)"
-    )
+    codigo_aluno: Optional[str] = Field(None, description="Identificador único do aluno")
+    ano_referencia: Optional[int] = Field(None, description="Ano do snapshot dos dados")
+    periodo_referencia: Optional[int] = Field(None, description="Período/Semestre do snapshot dos dados")
 
 
 try:
@@ -188,3 +182,12 @@ FEATURE_COLUMNS: List[str] = [
     "calouro",
     "idade",
 ]
+
+
+# ---------------------------------------------------------------------------
+# Definição dos Status para Filtragem (Consistência com Trainer)
+# ---------------------------------------------------------------------------
+STATUS_SUCESSO = {"formado"}
+STATUS_FRACASSO = {"desistente", "trancado"}
+STATUS_VALIDOS = STATUS_SUCESSO | STATUS_FRACASSO
+

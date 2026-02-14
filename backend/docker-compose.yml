@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  backend:
+    image: evasao-api
+    build: .
+    container_name: ml_backend
+    ports:
+      - "10000:10000"
+    volumes:
+      - ./src/models:/app/src/models
+    environment:
+      - PORT=10000
+    restart: unless-stopped

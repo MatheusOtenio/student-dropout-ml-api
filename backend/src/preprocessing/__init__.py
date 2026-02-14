@@ -3,6 +3,7 @@ from .preprocessing import (
     DataCleaningTransformer,
     FeatureEngineeringTransformer,
     AdaptiveCategoricalEncoder,
+    DropTechnicalColumns,
     get_preprocessor_pipeline,
 )
 
@@ -11,5 +12,6 @@ __all__ = [
     "DataCleaningTransformer",
     "FeatureEngineeringTransformer",
     "AdaptiveCategoricalEncoder",
+    "DropTechnicalColumns",
     "get_preprocessor_pipeline",
 ]

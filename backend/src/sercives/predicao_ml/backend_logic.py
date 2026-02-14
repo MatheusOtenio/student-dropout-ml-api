@@ -55,7 +55,12 @@ def predict(model_id: str, features: list | dict) -> list:
     else:
         rows = features
 
-    df = pd.DataFrame(rows)
+    # Converter para DataFrame
+    if isinstance(rows, pd.DataFrame):
+        df = rows.copy()
+    else:
+        df = pd.DataFrame(rows)
+
     logger.debug(
         "Executando predict: model_id=%s, linhas=%d, colunas=%d",
         model_id,
@@ -63,21 +68,38 @@ def predict(model_id: str, features: list | dict) -> list:
         df.shape[1],
     )
 
+    # --- Lógica de Predição Unificada ---
+    # O modelo espera as features brutas e aplica o pipeline completo.
+    # A única preparação necessária é remover 'situacao' se presente, para evitar data leakage.
+    
+    if "situacao" in df.columns:
+        logger.info("Removendo coluna 'situacao' do DataFrame de inferência (prevenção de data leakage).")
+        df = df.drop(columns=["situacao"])
+
     try:
         if hasattr(model, "predict_proba"):
-            proba = model.predict_proba(df)
+            # predict_proba retorna matriz [n_samples, n_classes]
+            proba_matrix = model.predict_proba(df)
+            
+            # Identificar o índice da classe positiva (1 = Desistente/Trancado)
             classes = getattr(model, "classes_", None)
-            if classes is not None and 1 in classes:
-                pos_index = list(classes).index(1)
-            else:
-                pos_index = proba.shape[1] - 1
-            predictions = proba[:, pos_index]
+            pos_index = -1 # Padrão para binário: última coluna
+            
+            if classes is not None:
+                try:
+                    classes_list = list(classes)
+                    pos_index = classes_list.index(1)
+                except ValueError:
+                    logger.warning(f"Classe 1 (Desistente) não encontrada em model.classes_: {classes}. Usando probabilidade da última classe.")
+                    pos_index = -1
+            
+            predictions = proba_matrix[:, pos_index]
         else:
+            logger.warning("Modelo '%s' não possui predict_proba. Usando predict (classe bruta).", model_id)
             predictions = model.predict(df)
-    except Exception as exc:
-        logger.exception("Erro em predição para model_id=%s", model_id)
-        raise RuntimeError(
-            "Erro ao executar predição com o modelo fornecido."
-        ) from exc
+            
+        return predictions.tolist()
 
-    return predictions.tolist()
+    except Exception as exc:
+        logger.exception("Erro crítico durante a inferência do modelo '%s'", model_id)
+        raise RuntimeError(f"Falha na execução do modelo preditivo: {exc}") from exc

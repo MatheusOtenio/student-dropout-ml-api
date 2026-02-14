@@ -1,4 +1,4 @@
-from src.modelo_regressao import (
+from .trainer import (
     _normalize_text,
     _map_situacao_to_binary,
     _build_base_model,
@@ -10,7 +10,7 @@ from src.modelo_regressao import (
     tune_and_train,
     train_model,
 )
- 
+
 __all__ = [
     "_normalize_text",
     "_map_situacao_to_binary",

@@ -8,6 +8,12 @@ services:
     volumes:
       - ./artifacts:/app/artifacts
 
+  csv_processor:
+    build: .
+    command: uvicorn src.csv_processor.main:app --host 0.0.0.0 --port 8001
+    ports:
+      - "8001:8001"
+
   frontend:
     build: .
     command: streamlit run frontend.py --server.port 8501 --server.address 0.0.0.0
@@ -15,5 +21,7 @@ services:
       - "8501:8501"
     depends_on:
       - backend
+      - csv_processor
     environment:
       - API_URL=http://backend:8000
+      - CSV_PROCESSOR_URL=http://csv_processor:8001

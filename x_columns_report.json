@@ -1,0 +1,497 @@
+[
+  {
+    "coluna": "Campus",
+    "presente": true,
+    "inferred_type": "categorical_string",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 1,
+    "top_values": {
+      "Apucarana": 58
+    },
+    "recomendacao": "Tratar como categórica: LabelEncoder (ordem) ou OneHotEncoder (nominal).; Considerar agrupar categorias raras em 'Outros'. / Categórica nominal; muitas categorias (cursos) -> agrupar ou usar target encoding."
+  },
+  {
+    "coluna": "Curso",
+    "presente": true,
+    "inferred_type": "categorical_string",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 1,
+    "top_values": {
+      "Engenharia Têxtil": 58
+    },
+    "recomendacao": "Tratar como categórica: LabelEncoder (ordem) ou OneHotEncoder (nominal).; Considerar agrupar categorias raras em 'Outros'. / Categórica nominal; muitas categorias (cursos) -> agrupar ou usar target encoding."
+  },
+  {
+    "coluna": "Idade",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 16,
+    "top_values": {
+      "26": 10,
+      "21": 7,
+      "18": 7,
+      "27": 6,
+      "28": 6
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Idade: converter para int; aglutinar faixas etárias se necessário."
+  },
+  {
+    "coluna": "Tipo de cota",
+    "presente": true,
+    "inferred_type": "categorical_string",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 7,
+    "top_values": {
+      "Ampla concorrência": 41,
+      "Categoria 1": 5,
+      "Categoria 3": 5,
+      "Categoria LI_EP (L05,3S)": 3,
+      "Categoria 2": 2
+    },
+    "recomendacao": "Tratar como categórica: LabelEncoder (ordem) ou OneHotEncoder (nominal).; Considerar agrupar categorias raras em 'Outros'."
+  },
+  {
+    "coluna": "Ano de ingresso",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 8,
+    "top_values": {
+      "2016": 23,
+      "2025": 17,
+      "2023": 8,
+      "2024": 4,
+      "2022": 3
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Pode ser fonte de 'idade acadêmica' — extrair diferença para ano atual/ano de ingresso."
+  },
+  {
+    "coluna": "Situação atual",
+    "presente": true,
+    "inferred_type": "categorical_string",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 5,
+    "top_values": {
+      "Regular": 26,
+      "Desistente": 25,
+      "Formado": 5,
+      "Transferido": 1,
+      "Trancado": 1
+    },
+    "recomendacao": "Tratar como categórica: LabelEncoder (ordem) ou OneHotEncoder (nominal).; Considerar agrupar categorias raras em 'Outros'."
+  },
+  {
+    "coluna": "Período",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 7,
+    "top_values": {
+      "1": 31,
+      "2": 13,
+      "10": 5,
+      "3": 4,
+      "4": 3
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas)."
+  },
+  {
+    "coluna": "Total de semestres cursados",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 15,
+    "top_values": {
+      "0": 17,
+      "2": 12,
+      "1": 6,
+      "6": 5,
+      "3": 3
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing. Pode ser fonte de 'idade acadêmica' — extrair diferença para ano atual/ano de ingresso."
+  },
+  {
+    "coluna": "Coeficiente de rendimento absoluto",
+    "presente": true,
+    "inferred_type": "float",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 40,
+    "top_values": {
+      "0,": 19,
+      "0,3709": 1,
+      "0,0705": 1,
+      "0,3643": 1,
+      "0,813": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Normalizar/Padronizar (StandardScaler) se usar modelos sensíveis à escala.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nr disciplinas reprovadas por nota",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 17,
+    "pct_nulos": 0.2931,
+    "n_unicos": 15,
+    "top_values": {
+      "0": 8,
+      "3": 7,
+      "1": 4,
+      "2": 4,
+      "7": 3
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Ano/semestre da situação",
+    "presente": true,
+    "inferred_type": "categorical_string",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 14,
+    "top_values": {
+      "2025/1": 17,
+      "2023/1": 7,
+      "2017/1": 6,
+      "2024/1": 5,
+      "2023/2": 5
+    },
+    "recomendacao": "Tratar como categórica: LabelEncoder (ordem) ou OneHotEncoder (nominal).; Considerar agrupar categorias raras em 'Outros'. / Pode ser fonte de 'idade acadêmica' — extrair diferença para ano atual/ano de ingresso."
+  },
+  {
+    "coluna": "Calouro",
+    "presente": true,
+    "inferred_type": "boolean_like",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 2,
+    "top_values": {
+      "Não": 41,
+      "Sim": 17
+    },
+    "recomendacao": "Mapear para 0/1 (por exemplo 'Sim'->1, 'Não'->0)."
+  },
+  {
+    "coluna": "Forma de ingresso",
+    "presente": true,
+    "inferred_type": "categorical_string",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 5,
+    "top_values": {
+      "SiSU - Sistema de Seleção Unificada": 42,
+      "Processo Seletivo Simplificado": 10,
+      "Vestibular": 4,
+      "PEC-G - Programa de Estudantes Convênio de Graduação": 1,
+      "Reopção de Curso": 1
+    },
+    "recomendacao": "Tratar como categórica: LabelEncoder (ordem) ou OneHotEncoder (nominal).; Considerar agrupar categorias raras em 'Outros'."
+  },
+  {
+    "coluna": "Gênero",
+    "presente": true,
+    "inferred_type": "categorical_string",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 2,
+    "top_values": {
+      "Masculino": 32,
+      "Feminino": 26
+    },
+    "recomendacao": "Tratar como categórica: LabelEncoder (ordem) ou OneHotEncoder (nominal).; Considerar agrupar categorias raras em 'Outros'."
+  },
+  {
+    "coluna": "Município",
+    "presente": true,
+    "inferred_type": "categorical_string",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 20,
+    "top_values": {
+      "Apucarana": 34,
+      "Londrina": 3,
+      "Arapongas": 3,
+      "Paraguaçu Paulista": 2,
+      "Iracemápolis": 1
+    },
+    "recomendacao": "Tratar como categórica: LabelEncoder (ordem) ou OneHotEncoder (nominal).; Considerar agrupar categorias raras em 'Outros'."
+  },
+  {
+    "coluna": "Nota ENEM Humanas",
+    "presente": true,
+    "inferred_type": "float",
+    "nulos": 14,
+    "pct_nulos": 0.2414,
+    "n_unicos": 44,
+    "top_values": {
+      "0,1": 1,
+      "560,7": 1,
+      "557,9": 1,
+      "614,1": 1,
+      "628,3": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Normalizar/Padronizar (StandardScaler) se usar modelos sensíveis à escala.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota ENEM Liguagem",
+    "presente": true,
+    "inferred_type": "float",
+    "nulos": 8,
+    "pct_nulos": 0.1379,
+    "n_unicos": 49,
+    "top_values": {
+      "633": 2,
+      "575,9": 1,
+      "623,33": 1,
+      "502,1": 1,
+      "557,1": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Normalizar/Padronizar (StandardScaler) se usar modelos sensíveis à escala.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota ENEM Matemática",
+    "presente": true,
+    "inferred_type": "float",
+    "nulos": 8,
+    "pct_nulos": 0.1379,
+    "n_unicos": 50,
+    "top_values": {
+      "462": 1,
+      "610": 1,
+      "550,4": 1,
+      "554,2": 1,
+      "674,3": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Normalizar/Padronizar (StandardScaler) se usar modelos sensíveis à escala.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota ENEM Natureza",
+    "presente": true,
+    "inferred_type": "float",
+    "nulos": 14,
+    "pct_nulos": 0.2414,
+    "n_unicos": 43,
+    "top_values": {
+      "597,8": 2,
+      "0,1": 1,
+      "470,6": 1,
+      "414,5": 1,
+      "448,2": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Normalizar/Padronizar (StandardScaler) se usar modelos sensíveis à escala.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota ENEM Redação",
+    "presente": true,
+    "inferred_type": "float",
+    "nulos": 14,
+    "pct_nulos": 0.2414,
+    "n_unicos": 20,
+    "top_values": {
+      "560": 7,
+      "600": 5,
+      "620": 4,
+      "680": 4,
+      "580": 4
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Normalizar/Padronizar (StandardScaler) se usar modelos sensíveis à escala.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular Biologia",
+    "presente": true,
+    "inferred_type": "float",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 3,
+    "top_values": {
+      "166,67": 3,
+      "500,00": 2,
+      "2.000,00": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Normalizar/Padronizar (StandardScaler) se usar modelos sensíveis à escala.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular Filosofia e Sociologia",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 4,
+    "top_values": {
+      "500,00": 2,
+      "0,00": 2,
+      "250,00": 1,
+      "750,00": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular Física",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 3,
+    "top_values": {
+      "125,00": 3,
+      "375,00": 2,
+      "250,00": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular Geografia",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 3,
+    "top_values": {
+      "500,00": 3,
+      "250,00": 2,
+      "750,00": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular História",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 3,
+    "top_values": {
+      "250,00": 3,
+      "500,00": 2,
+      "0,00": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular Literatura Brasileira",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 4,
+    "top_values": {
+      "250,00": 2,
+      "500,00": 2,
+      "750,00": 1,
+      "0,00": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular Língua Estrangeira Moderna (Espanhol ou Inglês)",
+    "presente": true,
+    "inferred_type": "float",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 4,
+    "top_values": {
+      "333,33": 2,
+      "500,00": 2,
+      "833,33": 1,
+      "166,67": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Normalizar/Padronizar (StandardScaler) se usar modelos sensíveis à escala.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular Língua Portuguesa",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 5,
+    "top_values": {
+      "375,00": 2,
+      "625,00": 1,
+      "500,00": 1,
+      "750,00": 1,
+      "125,00": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular Matemática",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 5,
+    "top_values": {
+      "375,00": 2,
+      "250,00": 1,
+      "750,00": 1,
+      "625,00": 1,
+      "1.000,00": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nota Vestibular Química",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 52,
+    "pct_nulos": 0.8966,
+    "n_unicos": 4,
+    "top_values": {
+      "125,00": 2,
+      "375,00": 2,
+      "0,00": 1,
+      "250,00": 1
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Nr disciplinas aprovadas",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 17,
+    "pct_nulos": 0.2931,
+    "n_unicos": 26,
+    "top_values": {
+      "0": 4,
+      "3": 4,
+      "4": 3,
+      "18": 3,
+      "12": 2
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Verificar formato decimal (vírgula/ponto). Valores zero podem indicar missing."
+  },
+  {
+    "coluna": "Semestre de ingresso",
+    "presente": true,
+    "inferred_type": "int",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 2,
+    "top_values": {
+      "1": 29,
+      "2": 29
+    },
+    "recomendacao": "Converter para numérico (pandas.to_numeric).; Tratar valores faltantes: imputar (mediana para numéricos) ou criar flag de missing.; Verificar outliers e valores impossíveis (ex: notas > 1000, idades negativas). / Pode ser fonte de 'idade acadêmica' — extrair diferença para ano atual/ano de ingresso."
+  },
+  {
+    "coluna": "Turno",
+    "presente": true,
+    "inferred_type": "categorical_string",
+    "nulos": 0,
+    "pct_nulos": 0.0,
+    "n_unicos": 1,
+    "top_values": {
+      "Diurno (M/T)": 58
+    },
+    "recomendacao": "Tratar como categórica: LabelEncoder (ordem) ou OneHotEncoder (nominal).; Considerar agrupar categorias raras em 'Outros'. / Categórica nominal; muitas categorias (cursos) -> agrupar ou usar target encoding."
+  }
+]

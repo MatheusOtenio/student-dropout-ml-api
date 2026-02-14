@@ -4,48 +4,14 @@ import traceback
 
 import pandas as pd
 
-from src.sercives.processador_csv.schemas import COLUNAS_WHITELIST  # TODO: Fix typo.
+from src.sercives.processador_csv.schemas import COLUNAS_WHITELIST, FEATURE_COLUMNS  # TODO: Fix typo.
 
 
 # ---------------------------------------------------------------------------
 # Ordem EXATA das colunas que o modelo espera como entrada.
-# Esse é o contrato entre o ETL e o predict().  Se o modelo for retreinado
-# com uma ordem diferente, atualizar aqui também.
+# Definida centralizadamente em schemas.py
 # ---------------------------------------------------------------------------
-FEATURE_COLUMNS: list[str] = [
-    "sexo",
-    "cor_raca",
-    "municipio_residencia",
-    "uf_residencia",
-    "curso",
-    "campus",
-    "turno",
-    "modalidade_ingresso",
-    "tipo_cota",
-    "coeficiente_rendimento",
-    "disciplinas_aprovadas",
-    "disciplinas_reprovadas_nota",
-    "disciplinas_reprovadas_frequencia",
-    "periodo",
-    "ano_ingresso",
-    "semestre_ingresso",
-    "nota_enem_humanas",
-    "nota_enem_linguagem",
-    "nota_enem_matematica",
-    "nota_enem_natureza",
-    "nota_enem_redacao",
-    "nota_vestibular_biologia",
-    "nota_vestibular_filosofia_sociologia",
-    "nota_vestibular_fisica",
-    "nota_vestibular_geografia",
-    "nota_vestibular_historia",
-    "nota_vestibular_literatura_brasileira",
-    "nota_vestibular_lingua_estrangeira",
-    "nota_vestibular_lingua_portuguesa",
-    "nota_vestibular_matematica",
-    "nota_vestibular_quimica",
-    "idade",
-]
+# FEATURE_COLUMNS importada de schemas.py
 
 
 def process_csv(file_like_obj: IO[bytes] | IO[str]) -> dict | list | pd.DataFrame:
@@ -133,11 +99,12 @@ def transformar_dados(
         "coeficiente_rendimento",
         "disciplinas_aprovadas",
         "disciplinas_reprovadas_nota",
-        "disciplinas_reprovadas_frequencia",
         "total_semestres_cursados",
         "ano_ingresso",
         "semestre_ingresso",
         "idade",
+        # NOVAS COLUNAS DO x_columns_report.json
+        "calouro",
     }
     colunas_numericas = set(colunas_numericas_prioritarias) | set(colunas_nota)
     colunas_numericas_presentes = [c for c in colunas_numericas if c in df.columns]
@@ -185,7 +152,8 @@ def transformar_dados(
     # "situacao" é deliberadamente excluída: é o target (label), não feature.
     colunas_categoricas = [
         "sexo", "turno", "curso", "campus", "modalidade_ingresso",
-        "tipo_cota", "cor_raca", "municipio_residencia", "uf_residencia",
+        "tipo_cota", "municipio_residencia",
+        "nome_aluno", "codigo_aluno",
     ]
     for coluna in colunas_categoricas:
         if coluna in df.columns:
@@ -194,9 +162,21 @@ def transformar_dados(
                 df.loc[mascara, coluna].astype(str).str.strip().str.upper()
             )
 
-    # --- 10) Reordena: FEATURE_COLUMNS + situacao no fim ---
+    # --- 10) Reordena: FEATURE_COLUMNS + situacao + identificadores no fim ---
     # data_nascimento já foi usado para calcular idade; não vai para a saída.
+    
+    # Colunas de identificação que queremos preservar se existirem
+    cols_identificacao = ["nome_aluno", "codigo_aluno"]
+    
     colunas_finais = [c for c in FEATURE_COLUMNS if c in df.columns] + ["situacao"]
+    
+    for col in cols_identificacao:
+        if col in df.columns:
+            colunas_finais.insert(0, col) # Coloca no início para melhor visualização
+            
+    # Remove duplicatas preservando ordem
+    colunas_finais = list(dict.fromkeys(colunas_finais))
+            
     df = df[colunas_finais].copy()
 
     return df, df_dropped
@@ -206,7 +186,9 @@ def preparar_para_predict(df: pd.DataFrame) -> pd.DataFrame:
     """
     Recebe o df saída de transformar_dados() e retorna um DataFrame
     pronto para passar ao predict():
-      • Remove 'situacao' (é o target, não uma feature).
+      • A coluna 'situacao' é MANTIDA aqui se existir, pois o backend_logic.py
+        precisa removê-la explicitamente apenas no momento da inferência para garantir
+        que não houve vazamento, mas pode ser usada para logs ou validações antes.
       • Remove 'data_nascimento' se ainda estiver presente.
       • Garante a ordem exata de FEATURE_COLUMNS.
       • Preenche colunas faltantes com NA.
@@ -219,7 +201,7 @@ def preparar_para_predict(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
     # Remove campos que não são features do modelo
-    for col in ["situacao", "data_nascimento"]:
+    for col in ["data_nascimento"]:
         if col in df.columns:
             df = df.drop(columns=[col])
 
@@ -228,5 +210,13 @@ def preparar_para_predict(df: pd.DataFrame) -> pd.DataFrame:
         if col not in df.columns:
             df[col] = pd.NA
 
-    # Reordena na ordem exata do modelo
-    return df[FEATURE_COLUMNS].copy()
+    # Retorna features + situacao (se existir)
+    # Importante: A ordem das features deve ser preservada para o modelo.
+    # 'situacao' vai no final se existir, mas NÃO é feature.
+    cols_to_return = list(FEATURE_COLUMNS)
+    if "situacao" in df.columns:
+        cols_to_return.append("situacao")
+        
+    # Seleciona apenas as colunas relevantes, ignorando extras
+    # fillna(np.nan) ou similar não é necessário aqui, o preprocessor cuidará dos NAs
+    return df[cols_to_return].copy()

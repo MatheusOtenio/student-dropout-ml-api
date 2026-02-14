@@ -3,16 +3,26 @@ import json
 import logging
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.sercives.processador_csv import mapping_service
 from src.sercives.processador_csv.etl_service import process_csv, transformar_dados, preparar_para_predict
-from src.sercives.predicao_ml.backend_logic import predict
+from src.sercives.predicao_ml.backend_logic import predict, get_model
 
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/mapping-suggestions")
@@ -176,7 +186,7 @@ async def health() -> dict[str, str]:
 @app.post("/predict")
 async def predict_endpoint(
     file: UploadFile = File(...),
-    model_id: str = Form("model_20260120T164252"),
+    model_id: str = Form(...),
     mapping: str | None = Form(None),
 ) -> dict[str, Any]:
     logger.info(
@@ -273,3 +283,22 @@ async def predict_endpoint(
             detail="Erro interno ao processar requisição.",
         ) from exc
 
+
+@app.get("/model/importance")
+async def model_importance(model_id: str) -> dict[str, Any]:
+    logger.info("Requisição /model/importance recebida para model_id=%s", model_id)
+    try:
+        bundle = get_model(model_id)
+        
+        # 1. Tenta buscar pronta no metadata (Ideal, igual ao modelo_pkl)
+        if isinstance(bundle, dict) and "metadata" in bundle:
+            imp = bundle["metadata"].get("feature_importance")
+            if imp and "mapped" in imp and imp["mapped"]:
+                return imp
+
+        # 2. Fallback simplificado (apenas retorna raw se não encontrar metadata)
+        return {"error": "Feature importance não disponível nos metadados deste modelo."}
+
+    except Exception as exc:
+        logger.exception("Erro em /model/importance")
+        raise HTTPException(status_code=500, detail=str(exc))

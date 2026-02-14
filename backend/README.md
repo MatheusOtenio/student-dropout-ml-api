@@ -83,15 +83,21 @@ Dentro de `backend/`:
    - No campo "URL da API" do Streamlit, use `http://localhost:10000`.
    - Envie um CSV de alunos, gere o mapeamento, pré-visualize o ETL e execute a predição.
 
-### 2.2. Usando Docker
+### 2.2. Usando Docker (Recomendado)
 
-Ainda dentro de `backend/`, você pode construir e rodar a imagem de produção do backend:
+A maneira mais simples e padronizada de rodar o backend é usando o **Docker Compose**. Isso garante que o serviço suba com todas as configurações corretas (portas, volumes, variáveis de ambiente).
+
+Certifique-se de estar na pasta `backend/` e execute:
 
 ```bash
-docker build -t evasao-api .
-
-docker run --rm -p 10000:10000 evasao-api
+docker-compose up --build
 ```
+
+O serviço da API estará disponível em `http://localhost:10000`.
+
+- O container será nomeado como `ml_backend`.
+- A pasta local `src/models` é montada no container, permitindo adicionar novos modelos sem precisar reconstruir a imagem.
+
 
 - `docker build -t evasao-api .` constrói a imagem usando o `Dockerfile` do backend.
 - `docker run --rm -p 10000:10000 evasao-api` expõe a API em `http://localhost:10000`.

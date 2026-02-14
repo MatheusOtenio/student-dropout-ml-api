@@ -20,7 +20,6 @@ NUMERIC_FEATURES: List[str] = [
     "coeficiente_rendimento",
     "disciplinas_aprovadas",
     "disciplinas_reprovadas_nota",
-    "disciplinas_reprovadas_frequencia",
     "periodo",
     "ano_ingresso",
     "semestre_ingresso",
@@ -40,14 +39,13 @@ NUMERIC_FEATURES: List[str] = [
     "nota_vestibular_matematica",
     "nota_vestibular_quimica",
     "idade",
+    "calouro",
 ]
 
 
 CATEGORICAL_FEATURES: List[str] = [
     "sexo",
-    "cor_raca",
     "municipio_residencia",
-    "uf_residencia",
     "curso",
     "campus",
     "turno",
@@ -195,8 +193,9 @@ class FeatureEngineeringTransformer(BaseEstimator, TransformerMixin):
     def _add_approval_ratio(self, X: pd.DataFrame) -> pd.DataFrame:
         approvals = pd.to_numeric(X.get("disciplinas_aprovadas"), errors="coerce")
         fails_grade = pd.to_numeric(X.get("disciplinas_reprovadas_nota"), errors="coerce")
-        fails_absence = pd.to_numeric(X.get("disciplinas_reprovadas_frequencia"), errors="coerce")
-        total = approvals + fails_grade + fails_absence
+        
+        total = approvals + fails_grade
+        
         denom = total.replace(0, np.nan)
         ratio = approvals / denom
         ratio = ratio.replace([np.inf, -np.inf], np.nan)
@@ -205,8 +204,15 @@ class FeatureEngineeringTransformer(BaseEstimator, TransformerMixin):
 
 
 class AdaptiveCategoricalEncoder(BaseEstimator, TransformerMixin):
-    def __init__(self, max_onehot_cardinality: int = 20) -> None:
+    def __init__(
+        self, 
+        max_onehot_cardinality: int = 20,
+        smoothing: float = 10.0,
+        min_samples_leaf: int = 20
+    ) -> None:
         self.max_onehot_cardinality = max_onehot_cardinality
+        self.smoothing = smoothing
+        self.min_samples_leaf = min_samples_leaf
 
     def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> "AdaptiveCategoricalEncoder":
         X = self._ensure_dataframe(X)
@@ -223,18 +229,27 @@ class AdaptiveCategoricalEncoder(BaseEstimator, TransformerMixin):
             self.onehot_.fit(X[self.low_card_cols_])
         else:
             self.onehot_ = None
-        if self.high_card_cols_ and y is not None:
+        if self.high_card_cols_:
+            if y is None:
+                raise ValueError(
+                    "Target y is required for high-cardinality columns using TargetEncoder. "
+                    "Ensure you are calling fit(X, y) with a valid target vector."
+                )
+            
+            # Garante alinhamento de índices resetando ambos
+            X_high = X[self.high_card_cols_].reset_index(drop=True)
             y_series = pd.Series(y).reset_index(drop=True)
+            
             self.global_mean_ = float(y_series.mean())
             self.target_encoder_ = ce.TargetEncoder(
                 cols=self.high_card_cols_,
                 handle_unknown="value",
                 handle_missing="value",
+                smoothing=self.smoothing,
+                min_samples_leaf=self.min_samples_leaf,
             )
-            self.target_encoder_.fit(X[self.high_card_cols_], y_series)
+            self.target_encoder_.fit(X_high, y_series)
         else:
-            if y is None and self.high_card_cols_:
-                logger.warning("Target y is None, fallback to constant imputation for high-cardinality columns.")
             self.target_encoder_ = None
             self.global_mean_ = 0.0
         return self
@@ -262,16 +277,63 @@ class AdaptiveCategoricalEncoder(BaseEstimator, TransformerMixin):
             return np.empty((X.shape[0], 0))
         return np.hstack(parts)
 
+    def get_feature_names_out(self, input_features: Optional[Sequence[str]] = None) -> np.ndarray:
+        check_is_fitted(self, ["columns_", "low_card_cols_", "high_card_cols_"])
+        names = []
+        if self.low_card_cols_ and getattr(self, "onehot_", None) is not None:
+            names.extend(self.onehot_.get_feature_names_out(self.low_card_cols_))
+        if self.high_card_cols_:
+            names.extend(self.high_card_cols_)
+        return np.array(names, dtype=object)
+
     def _ensure_dataframe(self, X: Any) -> pd.DataFrame:
         if isinstance(X, pd.DataFrame):
             return X
         return pd.DataFrame(X)
 
 
+class DropTechnicalColumns(BaseEstimator, TransformerMixin):
+    """
+    Remove colunas técnicas e identificadores que não devem ser usados como features,
+    mas que precisam estar presentes até o momento do split.
+    """
+    def __init__(self, cols_to_drop: Optional[List[str]] = None):
+        if cols_to_drop is None:
+            self.cols_to_drop = [
+                "codigo_aluno", 
+                "ano_referencia", 
+                "periodo_referencia", 
+                "situacao", 
+                "target_evasao", 
+                "is_target_valid"
+            ]
+        else:
+            self.cols_to_drop = cols_to_drop
+
+    def fit(self, X: pd.DataFrame, y: Optional[pd.Series] = None) -> "DropTechnicalColumns":
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        if not hasattr(X, "columns"):
+            return X
+        
+        # Interseção entre colunas existentes e as que queremos remover
+        existing_cols = [c for c in self.cols_to_drop if c in X.columns]
+        if existing_cols:
+            return X.drop(columns=existing_cols)
+        return X
+
 def get_preprocessor_pipeline(
     numeric_features: Optional[Sequence[str]] = None,
     categorical_features: Optional[Sequence[str]] = None,
 ) -> Pipeline:
+    """
+    Cria o pipeline de pré-processamento com imputação determinística e remoção de colunas técnicas.
+    
+    Estratégia de Imputação:
+    - Numéricos: Mediana (SimpleImputer strategy='median')
+    - Categóricos: Constante "missing" (SimpleImputer strategy='constant')
+    """
     base_numeric = list(numeric_features) if numeric_features is not None else list(NUMERIC_FEATURES)
     base_categorical = (
         list(categorical_features) if categorical_features is not None else list(CATEGORICAL_FEATURES)
@@ -279,26 +341,36 @@ def get_preprocessor_pipeline(
     engineered_numeric = list(ENGINEERED_NUMERIC_FEATURES)
     numeric_for_ensure = base_numeric + engineered_numeric
     numeric_for_model = numeric_for_ensure
+    
+    # Adicionando passo de remoção de colunas técnicas antes do processamento
+    
+    # 1. Pipelines Específicos por Tipo de Dado
     numeric_transformer = Pipeline(
         steps=[
-            ("imputer", SimpleImputer(strategy="median")),
+            ("imputer", SimpleImputer(strategy="median").set_output(transform="pandas")),
             ("scaler", StandardScaler()),
         ]
     )
+    
     categorical_transformer = Pipeline(
         steps=[
-            ("imputer", SimpleImputer(strategy="constant", fill_value="missing")),
+            ("imputer", SimpleImputer(strategy="constant", fill_value="missing").set_output(transform="pandas")),
             ("encoder", AdaptiveCategoricalEncoder()),
         ]
     )
+
+    # 2. ColumnTransformer para aplicar pipelines específicos
     column_transformer = ColumnTransformer(
         transformers=[
             ("num", numeric_transformer, numeric_for_model),
             ("cat", categorical_transformer, base_categorical),
         ]
     )
+
+    # 3. Pipeline Base (Limpeza e Feature Engineering Geral)
     base_pipeline = Pipeline(
         steps=[
+            ("drop_technical", DropTechnicalColumns()),
             (
                 "ensure_columns",
                 EnsureColumnsTransformer(
@@ -310,9 +382,12 @@ def get_preprocessor_pipeline(
             ("features", FeatureEngineeringTransformer()),
         ]
     )
+
+    # 4. Pipeline Final
     return Pipeline(
         steps=[
             ("base", base_pipeline),
             ("preprocess", column_transformer),
         ]
     )
+

@@ -48,3 +48,31 @@ class TrainingDataset(BaseModel):
 
 class PredictionDataset(BaseModel):
     records: List[PredictionSample]
+
+
+class SplitConfig(BaseModel):
+    train_range: List[int]  # [start_year, end_year]
+    val_year: int
+    test_year: int
+
+    @field_validator("train_range")
+    @classmethod
+    def validate_range(cls, v: List[int]) -> List[int]:
+        if len(v) != 2:
+            raise ValueError("train_range must have exactly 2 elements: [start, end]")
+        if v[0] > v[1]:
+            raise ValueError("train_range start must be <= end")
+        return v
+
+
+class ModelConfig(BaseModel):
+    model_type: str = "lightgbm"
+    split_config: Optional[SplitConfig] = None
+    model_params: Optional[Dict[str, Any]] = None
+    random_state: int = 42
+    calibrate: bool = False
+    calibration_cv: int = 5
+    calibration_method: str = "isotonic"
+    optimize_trials: int = 20
+    artifact_path: Optional[str] = None
+    version: str = "1.0.0"
